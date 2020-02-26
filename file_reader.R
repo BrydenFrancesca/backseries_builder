@@ -50,9 +50,9 @@ hort_dataframe <- hort_dataframe %>%
   group_by(Date, Item, Variety, Units) %>%
   summarise(Price = mean(Price, na.rm = T)) %>%
   separate(Units, c("Currency", "Units"), "/") %>%
-  na.omit() %>%
-  mutate(Price = case_when(Currency == "p", Price / 100,
-                           Currency != "p", ~ Price)) %>%
+  na.omit() %>% 
+  mutate(Price = case_when(Currency == "p" ~ round(Price / 100, 2),
+                           Currency != "p" ~ round(Price, 2))) %>%
   mutate(Currency = "£") 
 
 ##Put text in lower case and remove spaces
