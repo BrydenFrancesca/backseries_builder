@@ -1,6 +1,6 @@
 if (!require("pacman")) install.packages("pacman")
 library(pacman)
-pacman::p_load(dplyr, readxl, data.table)
+pacman::p_load(dplyr, readxl, data.table, tidyr)
 
 ##Function to paste together filepaths
 locations <- function(data, filepath){
@@ -24,4 +24,34 @@ valid_file_list <- lapply(file_list, function(x) if(file.exists(x)) read_excel(x
 valid_file_list <- valid_file_list[!sapply(valid_file_list, is.null)]
 
 ##Convert to one long dataframe
-valid_file_dataframe <- as.data.table(rbindlist(valid_file_list, fill=T))
+hort_dataframe <- as.data.table(rbindlist(valid_file_list, fill=T))
+
+#Find dates and put them in a separate column
+hort_dataframe <- hort_dataframe %>% 
+  mutate(Date = case_when(...1 == "PRICES ARE FOR THE WEEK ENDING(2):" ~ ...3)) %>%
+  mutate(Date = as.Date(as.numeric(Date), origin = "1899-12-30")) %>%
+  fill(Date)
+
+##Find rows where columns are shifted over by 1 and correct latest price
+hort_dataframe <- hort_dataframe %>% mutate(...5 = case_when(!is.na(...9) ~ ...6,
+                                                                          is.na(...9) ~ ...5))
+##Delete unwanted columns and rename existing columns
+hort_dataframe <- hort_dataframe[-c(4, 6:11)]
+colnames(hort_dataframe) <- c("Item", "Variety", "Units", "Price", "Date")
+
+##Omit all rows that have no price
+hort_dataframe$Price <- as.numeric(hort_dataframe$Price)
+hort_dataframe <- hort_dataframe[!is.na(hort_dataframe$Price),]
+
+##Create averages for items which have two classes
+hort_dataframe <- hort_dataframe %>% 
+  fill(Item) %>%
+  group_by(Date, Item, Variety, Units) %>%
+  summarise(Price = round(mean(Price, na.rm = T),2))
+
+##Put text in lower case and remove spaces
+hort_dataframe$Item <- tolower(hort_dataframe$Item) 
+hort_dataframe$Variety <- tolower(hort_dataframe$Variety)
+hort_dataframe$Item <- gsub(" ", "_", hort_dataframe$Item)
+hort_dataframe$Variety <- gsub(" ", "_", hort_dataframe$Variety)
+
