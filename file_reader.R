@@ -43,15 +43,22 @@ colnames(hort_dataframe) <- c("Item", "Variety", "Units", "Price", "Date")
 hort_dataframe$Price <- as.numeric(hort_dataframe$Price)
 hort_dataframe <- hort_dataframe[!is.na(hort_dataframe$Price),]
 
-##Create averages for items which have two classes
+##Create averages for items which have two classes and split units and currency
+hort_dataframe$Units <- gsub(" each", "/each", hort_dataframe$Units)
 hort_dataframe <- hort_dataframe %>% 
   fill(Item) %>%
   group_by(Date, Item, Variety, Units) %>%
-  summarise(Price = round(mean(Price, na.rm = T),2))
+  summarise(Price = round(mean(Price, na.rm = T),2)) %>%
+  separate(Units, c("Currency", "Units"), "/") %>%
+  na.omit()
 
 ##Put text in lower case and remove spaces
 hort_dataframe$Item <- tolower(hort_dataframe$Item) 
 hort_dataframe$Variety <- tolower(hort_dataframe$Variety)
 hort_dataframe$Item <- gsub(" ", "_", hort_dataframe$Item)
 hort_dataframe$Variety <- gsub(" ", "_", hort_dataframe$Variety)
+
+
+##Write tidy data to CSV
+write.csv(hort_dataframe, file = "L:/Prices/AMR/HORT/Machine readable/hort_backseries.csv", row.names = F)
 
